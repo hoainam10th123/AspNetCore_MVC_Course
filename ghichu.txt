@@ -1,0 +1,150 @@
+het 8
+
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> signInManager
+
+@if (signInManager.IsSignedIn(User) && User.IsInRole("Admin"))
+
+ <div class="mb-3">
+     <label class="form-label">Tags</label>
+     <select class="form-select"
+             asp-items="@Model.Tags"
+             asp-for="SelectedTags">
+     </select>
+ </div>
+ 
+ 
+ @section Scripts {
+    <script>
+        var editor = new FroalaEditor('#content', {
+            imageUploadURL: '/api/images'
+        });
+
+
+        const featuredUploadElement = document.getElementById('featuredImageUpload');
+        const featuredImageUrlElement = document.getElementById('featuredImageUrl');
+        const featuredImageDisplayElement = document.getElementById('featuredImageDisplay');
+
+
+        async function uploadFeaturedImage(e) {
+            console.log(e.target.files[0]);
+
+            let data = new FormData();
+            data.append('file', e.target.files[0]);
+
+            await fetch('/api/images', {
+                method: 'POST',
+                headers: {
+                    'Aceept': '*/*',
+                },
+                body: data
+            }).then(response => response.json())
+                .then(result => {
+                    featuredImageUrlElement.value = result.link;
+                    featuredImageDisplayElement.src = result.link;
+                    featuredImageDisplayElement.style.display = 'block';
+                });
+        }
+
+
+        featuredUploadElement.addEventListener('change', uploadFeaturedImage);
+
+
+    </script>
+}
+
+
+<li><a class="dropdown-item" asp-area="" asp-controller="AdminTags" asp-action="Add">Add tag</a></li>
+
+@model List<TutMvc.Models.Domain.Tag>
+
+View: @model TutMvc.Models.ViewModels.AddTagRequest
+
+
+@if (Model != null)
+
+asp-for: de bind model
+
+<input type="text" class="form-control" id="name" asp-for="Name" required />
+
+<td>
+    <a asp-area="" asp-controller="AdminTags"
+       asp-action="Edit"
+       asp-route-id="@tag.Id">Edit</a>
+</td>
+
+<form method="post">
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-control" id="name" asp-for="Name" required />
+        <span class="text-danger" asp-validation-for="Name"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Display Name</label>
+        <input type="text" class="form-control" id="displayName" asp-for="DisplayName" required />
+        <span class="text-danger" asp-validation-for="DisplayName"></span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-dark">Submit</button>
+    </div>
+</form>
+
+
+[HttpGet]
+        [ActionName("List")]
+        public async Task<IActionResult> List(
+            string? searchQuery, 
+            string? sortBy, 
+            string? sortDirection,
+            int pageSize = 3,
+            int pageNumber = 1)
+        {
+            var totalRecords = await tagRepository.CountAsync();
+            var totalPages = Math.Ceiling((decimal)totalRecords / pageSize);
+
+            if (pageNumber > totalPages)
+            {
+                pageNumber--;
+            }
+
+            if (pageNumber < 1)
+            {
+                pageNumber++;
+            }
+
+
+            ViewBag.TotalPages = totalPages;
+            ViewBag.SearchQuery = searchQuery;
+            ViewBag.SortBy = sortBy;
+            ViewBag.SortDirection = sortDirection;
+            ViewBag.PageSize = pageSize;
+            ViewBag.PageNumber = pageNumber;
+
+            // use dbContext to read the tags
+            var tags = await tagRepository.GetAllAsync(searchQuery, sortBy, sortDirection, pageNumber, pageSize);
+
+            return View(tags);
+        }
+
+
+
+<a class="btn btn-light"
+   asp-controller="AdminTags"
+   asp-action="List"
+   asp-route-sortBy="DisplayName"
+   asp-route-sortDirection="Asc"
+   asp-route-searchQuery="@ViewBag.SearchQuery">
+    <i class="bi bi-arrow-up"></i>
+</a>
+
+[HttpGet]
+        [ActionName("List")]
+        public async Task<IActionResult> List(
+            string? searchQuery, 
+            string? sortBy, 
+            string? sortDirection,
+            int pageSize = 3,
+            int pageNumber = 1)
+        {
